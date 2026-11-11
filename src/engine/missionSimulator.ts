@@ -2,6 +2,7 @@ import { eventsFor } from '../data/events';
 import type { FlightState } from '../types/gameState';
 import type { Mission } from '../types/mission';
 import type { Build } from '../types/spacecraft';
+import type { SpaceWeather } from '../types/spaceWeather';
 import { applyEffects, applyRule, cloneState, pushLog } from './decisionProcessor';
 import { DEBT_LABEL, calculateBuildStats } from './resourceCalculator';
 import { calculateBuildDebt } from './technicalDebt';
@@ -10,7 +11,12 @@ const BURN_NAMES = ['mid-course correction', 'arrival manoeuvre', 'powered desce
 const BURN_PHASES = ['Mid-Course Correction', 'Arrival Manoeuvre', 'Powered Descent', ''];
 
 /** Builds the state of the spacecraft at liftoff from the player's design. */
-export function createInitialFlightState(mission: Mission, build: Build, repairKits = 0): FlightState {
+export function createInitialFlightState(
+  mission: Mission,
+  build: Build,
+  repairKits = 0,
+  spaceWeather?: SpaceWeather,
+): FlightState {
   const stats = calculateBuildStats(build, mission);
   const { debts, contributions } = calculateBuildDebt(build, mission, stats);
 
@@ -60,6 +66,19 @@ export function createInitialFlightState(mission: Mission, build: Build, repairK
     ...base, kind: 'flight', severity: 'good', title: 'Liftoff',
     text: `${mission.codename} has cleared the tower. Fuelled mass ${Math.round(stats.wetMass)} kg.`, tags: [],
   });
+  // Live NASA space weather becomes a fixed part of this mission from launch on.
+  if (spaceWeather && spaceWeather.source !== 'offline') {
+    state.spaceWeather = spaceWeather;
+    state.flags.push(`sw_${spaceWeather.level}`);
+    pushLog(state, {
+      ...base, kind: 'flight', severity: spaceWeather.level === 'strong' ? 'warn' : 'info',
+      title: `Space weather at launch: ${spaceWeather.level.toUpperCase()} (NASA DONKI data)`,
+      text: spaceWeather.fastestSpeed !== null
+        ? `NASA recorded ${spaceWeather.eventCount} coronal mass ejections in the ${spaceWeather.windowDays} days before launch. Fastest: ${spaceWeather.fastestSpeed} km/s on ${spaceWeather.fastestDate}.`
+        : `NASA recorded no coronal mass ejections in the ${spaceWeather.windowDays} days before launch.`,
+      tags: [],
+    });
+  }
   // Record every design weakness so later failures can be traced back to it.
   for (const c of contributions) {
     pushLog(state, {

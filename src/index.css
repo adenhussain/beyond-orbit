@@ -204,3 +204,13 @@ button:focus-visible {
   box-shadow: 0 0 24px rgba(207, 220, 234, 0.25);
   animation: moon-orbit 40s ease-in-out infinite alternate;
 }
+
+/* ---------- Colour-blind palette (Settings) ----------
+   Green "good" becomes sky blue and red "critical" becomes magenta, so the
+   two never depend on telling red from green. Amber stays as the warning. */
+:root[data-palette="colorblind"] {
+  --color-phosphor: #4cc3ff;
+  --color-phosphor-dim: #2a7fb0;
+  --color-amber: #ffd447;
+  --color-alert: #ff5fd2;
+}

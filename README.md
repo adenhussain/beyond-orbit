@@ -9,6 +9,20 @@ decision and explore an alternative timeline.
 Educational game with simplified, consistent engineering rules. It is not a
 flight-certified tool.
 
+## What makes it different
+
+- **Real NASA data.** The Mars mission's radiation storm is set by real
+  coronal mass ejections from NASA's DONKI space-weather database. The main
+  menu shows the latest solar activity and today's radio delay to Mars.
+- **Real history.** Every emergency is based on a real event (Soyuz MS-22,
+  Galileo, Apollo 13, Mars Odyssey, Perseverance, InSight). After each
+  decision a "This really happened" card shows what the real team did.
+- **Real physics you can feel.** On Mars, Mission Control's advice reaches
+  you only after the real round-trip radio delay for today's date. Wait for
+  Earth, or decide alone.
+- **Time Machine.** Rewind any decision, branch a new timeline, and compare
+  outcomes and scores side by side.
+
 ## Run it
 
 ```bash
@@ -22,7 +36,38 @@ Other commands:
 npm test         # engine tests: every decision path, determinism, Time Machine
 npm run build    # type-check and build for production (output in dist/)
 npm run preview  # serve the production build
+npm run update-space-weather  # refresh the bundled NASA data snapshot
 ```
+
+## Presenting it (Demo Mission)
+
+Choose **Demo Mission (3 min)** on the main menu. A guide bar along the top
+tells the presenter what to do at each step: collect three supplies, launch
+the pre-designed ship, make one "bad" decision, see the Damage Analysis, then
+rewind with the Time Machine and compare both timelines. The demo never
+overwrites the player's saved game.
+
+## Publishing it
+
+The build uses relative paths, so the `dist/` folder works on any static
+host (GitHub Pages, Netlify, Vercel, or a USB stick with `npm run preview`).
+
+For GitHub Pages: push this repository to GitHub, then in the repository's
+Settings → Pages choose **GitHub Actions**. The workflow in
+`.github/workflows/deploy.yml` tests, builds and publishes on every push to
+`main`.
+
+## Live NASA data
+
+- Source: `https://api.nasa.gov/DONKI/CME` (last 30 days), using NASA's
+  public `DEMO_KEY`. Fetched once at start-up and cached for 3 hours.
+- The shared `DEMO_KEY` is rate limited per network. When it fails, the game
+  uses `src/data/spaceWeatherSnapshot.json`, real NASA data saved with
+  `npm run update-space-weather` (set `NASA_API_KEY` for a personal free key;
+  it is only used by that script and never shipped in the game).
+- The data is captured at launch inside the flight state, so missions and
+  Time Machine timelines stay deterministic.
+
 
 ## Controls
 
@@ -33,6 +78,11 @@ npm run preview  # serve the production build
 | Shift | Sprint |
 | E | Interact (collect, refill oxygen, enter workshop, use console) |
 | Esc | Pause |
+
+Gamepads work too (stick or d-pad to move, A jump, X or B interact, shoulder
+buttons sprint, Start pause). Settings also offer on-screen touch controls,
+music, a colour-blind palette and the CRT effect. Dialog buttons still need a
+mouse or touch.
 
 ## Game flow
 
@@ -66,13 +116,15 @@ src/
     challengeManager.ts    starting a challenge, advisories, locked options
     decisionProcessor.ts   conditions, effects, applying a decision
     timelineManager.ts     snapshots and branching (the Time Machine)
+    lightTime.ts           Earth–Moon / Earth–Mars radio delay
+    missionScore.ts        mission score and rank
     outcomeEvaluator.ts    success / partial / failure
     failureAnalyzer.ts     Failure Autopsy from the simulation log
   data/            Missions, components, supplies, challenges, hazards (no logic)
   state/           One reducer holding all game state, plus autosave
   components/      React interface: HUD, inventory, workshop, dialogs, reports
   pages/           One file per screen
-  services/        Sound effects and the optional AI advisor service
+  services/        Sound, music, live NASA space weather, optional AI advisor
   types/           Shared TypeScript types
 ```
 

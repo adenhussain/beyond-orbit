@@ -1,6 +1,9 @@
-import { ChevronRight, GitBranch, Lock, TriangleAlert } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BookOpen, ChevronRight, GitBranch, Lock, Radio, TriangleAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { getAdvisories, getChallenge, getLockReason, situationEntries } from '../../engine/challengeManager';
+import { HISTORY } from '../../data/history';
+import { analysisWaitSeconds, lightDelay } from '../../engine/lightTime';
 import { DEBT_LABEL } from '../../engine/resourceCalculator';
 import { sound } from '../../services/sound';
 import { useGame } from '../../state/useGame';
@@ -18,6 +21,27 @@ const VERDICT_LABEL: Record<Verdict, string> = { good: 'NOMINAL', mixed: 'TRADE-
  */
 export function ChallengeDialog() {
   const { mission, timeline, dispatch } = useGame();
+
+  // RADIO DELAY: Mission Control's analysis travels to Earth and back at the
+  // speed of light. On Mars that takes many minutes, so the player either
+  // waits for Earth or acts on onboard data alone, as real Mars crews would.
+  const delay = lightDelay(mission?.id ?? 'lunar');
+  const waitTotal = analysisWaitSeconds(delay);
+  const pointKey = `${timeline?.id}-${timeline?.challengeIndex}`;
+  const [waited, setWaited] = useState({ key: pointKey, seconds: 0 });
+  const elapsed = waited.key === pointKey ? waited.seconds : 0;
+  useEffect(() => {
+    if (waitTotal === 0) return;
+    const started = Date.now();
+    const timer = setInterval(() => {
+      const seconds = (Date.now() - started) / 1000;
+      setWaited({ key: pointKey, seconds });
+      if (seconds >= waitTotal) clearInterval(timer);
+    }, 250);
+    return () => clearInterval(timer);
+  }, [pointKey, waitTotal]);
+  const analysisReady = elapsed >= waitTotal;
+
   if (!mission || !timeline || (timeline.stage !== 'challenge' && timeline.stage !== 'result')) return null;
 
   const challenge = getChallenge(mission.id, timeline.challengeIndex);
@@ -63,6 +87,20 @@ export function ChallengeDialog() {
             </p>
           )}
 
+          {!record && (
+            <div className={`mt-4 flex items-start gap-2 border px-3 py-2 text-xs ${analysisReady ? 'border-line text-ink/75' : 'border-cyan/60 bg-cyan/5 text-cyan'}`}>
+              <Radio size={13} className={`mt-0.5 shrink-0 ${analysisReady ? '' : 'blink'}`} />
+              <span>
+                EARTH LINK — signal delay {delay.label} each way ({Math.round(delay.distanceKm / 1e6) > 0 ? `${(delay.distanceKm / 1e6).toFixed(1)} million km` : `${Math.round(delay.distanceKm).toLocaleString()} km`}).{' '}
+                {waitTotal === 0
+                  ? 'Mission Control analysis is available almost instantly.'
+                  : analysisReady
+                    ? 'Mission Control analysis received.'
+                    : `Mission Control analysis arrives in ${Math.ceil(waitTotal - elapsed)} s (1 game second per real minute of round trip). You may act now on onboard data alone.`}
+              </span>
+            </div>
+          )}
+
           {situation.length > 0 && (
             <div className="mt-4 border-l-2 border-cyan pl-3">
               <div className="label text-cyan">Consequences of your design and earlier decisions</div>
@@ -72,15 +110,18 @@ export function ChallengeDialog() {
                     <span className={entry.severity === 'crit' ? 'text-alert' : entry.severity === 'good' ? 'text-phosphor' : 'text-amber'}>{entry.title}</span>
                     <span className="text-ink/65"> — {entry.text}</span>
                     {entry.changes.length > 0 && <span className="text-cyan/80"> [{entry.changes.join(', ')}]</span>}
-                    {(entry.causedByFlags.length > 0 || entry.causedByDebts.length > 0 || (entry.causedByDesign ?? []).length > 0) && (
-                      <span className="block text-mute">
-                        ↳ Cause: {[
-                          ...entry.causedByFlags.filter((f) => state.flagOrigins[f]).map((f) => `"${state.flagOrigins[f].optionLabel}" at Challenge ${state.flagOrigins[f].challengeIndex + 1}`),
-                          ...entry.causedByDebts.map((d) => `${DEBT_LABEL[d].toLowerCase()} debt from your design`),
-                          ...(entry.causedByDesign ?? []),
-                        ].join('; ')}
-                      </span>
-                    )}
+                    {(() => {
+                      const causes = [
+                        ...entry.causedByFlags.flatMap((f) =>
+                          state.flagOrigins[f]
+                            ? [`"${state.flagOrigins[f].optionLabel}" at Challenge ${state.flagOrigins[f].challengeIndex + 1}`]
+                            : f.startsWith('sw_') ? ['real solar activity recorded by NASA before launch'] : [],
+                        ),
+                        ...entry.causedByDebts.map((d) => `${DEBT_LABEL[d].toLowerCase()} debt from your design`),
+                        ...(entry.causedByDesign ?? []),
+                      ];
+                      return causes.length > 0 && <span className="block text-mute">↳ Cause: {causes.join('; ')}</span>;
+                    })()}
                   </li>
                 ))}
               </ul>
@@ -103,12 +144,16 @@ export function ChallengeDialog() {
                     </ul>
                     {advisories.length > 0 && (
                       <div className="mt-3 border-t border-line pt-2">
-                        <div className="label mb-1">Flight director analysis</div>
-                        <ul className="space-y-1 text-xs">
-                          {advisories.map((a) => (
-                            <li key={a.text} className={TONE_TEXT[a.level]}>▸ {a.text}</li>
-                          ))}
-                        </ul>
+                        <div className="label mb-1">Flight director analysis (Earth)</div>
+                        {analysisReady ? (
+                          <ul className="space-y-1 text-xs">
+                            {advisories.map((a) => (
+                              <li key={a.text} className={TONE_TEXT[a.level]}>▸ {a.text}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="blink text-xs text-cyan">▸ Awaiting transmission from Earth…</p>
+                        )}
                       </div>
                     )}
                     <div className="mt-auto pt-4">
@@ -143,6 +188,14 @@ export function ChallengeDialog() {
                   {record.changes.map((change) => (
                     <span key={change} className="border border-line bg-void px-2 py-0.5 text-xs text-cyan">{change}</span>
                   ))}
+                </div>
+              )}
+              {HISTORY[challenge.id] && (
+                <div className="mt-4 border border-cyan/50 bg-cyan/5 p-3">
+                  <div className="label flex items-center gap-1.5 !text-cyan"><BookOpen size={12} /> This really happened · {HISTORY[challenge.id].mission} · {HISTORY[challenge.id].year}</div>
+                  <div className="mt-1 text-sm text-ink">{HISTORY[challenge.id].title}</div>
+                  <p className="mt-1 text-xs leading-relaxed text-ink/75">{HISTORY[challenge.id].happened}</p>
+                  <p className="mt-1.5 text-xs text-phosphor">Lesson: {HISTORY[challenge.id].lesson}</p>
                 </div>
               )}
               <div className="mt-4 flex justify-end">

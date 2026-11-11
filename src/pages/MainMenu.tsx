@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Info, Play, Rocket, Settings, X } from 'lucide-react';
+import { Info, MonitorPlay, Play, Rocket, Satellite, Settings, X } from 'lucide-react';
 import { Button } from '../components/UI/Button';
 import { Panel } from '../components/UI/Panel';
 import { getMission } from '../data/missions';
-import { loadSavedGame } from '../state/saveGame';
+import { lightDelay } from '../engine/lightTime';
+import { describeWeather } from '../services/spaceWeather';
+import { loadBestScores, loadSavedGame } from '../state/saveGame';
 import { useGame } from '../state/useGame';
 
 type Dialog = 'settings' | 'credits' | null;
@@ -18,6 +20,9 @@ export function MainMenu() {
   const { state, dispatch } = useGame();
   const [dialog, setDialog] = useState<Dialog>(null);
   const saved = useMemo(() => loadSavedGame(), []);
+  const best = useMemo(() => loadBestScores(), []);
+  const sw = state.spaceWeather;
+  const marsDelay = lightDelay('mars');
 
   return (
     <div className="relative flex min-h-full flex-col items-center justify-center gap-8 overflow-hidden px-6 py-10">
@@ -64,9 +69,43 @@ export function MainMenu() {
             {getMission(saved.missionId).name} · {SCREEN_NAME[saved.screen] ?? saved.screen}
           </p>
         )}
+        <Button size="lg" variant="amber" icon={<MonitorPlay size={16} />} onClick={() => dispatch({ type: 'START_DEMO' })}>
+          Demo Mission (3 min)
+        </Button>
         <Button size="lg" variant="ghost" icon={<Settings size={16} />} onClick={() => setDialog('settings')}>Settings</Button>
         <Button size="lg" variant="ghost" icon={<Info size={16} />} onClick={() => setDialog('credits')}>Credits</Button>
       </nav>
+
+      {/* Live data from NASA */}
+      <section className="panel relative w-full max-w-2xl px-4 py-3 text-xs" aria-label="Live NASA data">
+        <div className="label mb-1.5 flex items-center gap-1.5 !text-cyan">
+          <Satellite size={12} /> Live from NASA ·{' '}
+          {sw === null ? <span className="blink">contacting api.nasa.gov…</span> : sw.source === 'offline' ? 'offline' : sw.source === 'snapshot' ? 'saved snapshot' : sw.source === 'cached' ? 'recent' : 'live'}
+        </div>
+        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+          <div>
+            <span className="text-mute">Solar storms (NASA DONKI): </span>
+            {sw ? (
+              <span className={sw.level === 'strong' ? 'text-alert' : sw.level === 'moderate' ? 'text-amber' : 'text-phosphor'}>
+                {sw.source === 'offline' ? 'unavailable' : sw.level.toUpperCase()}
+              </span>
+            ) : '…'}
+            <div className="text-ink/70">{sw ? describeWeather(sw) : 'Fetching recent solar flares.'}</div>
+          </div>
+          <div>
+            <span className="text-mute">Radio delay to Mars today: </span>
+            <span className="text-phosphor">{marsDelay.label}</span>
+            <div className="text-ink/70">{(marsDelay.distanceKm / 1e6).toFixed(0)} million km away. Earth's advice reaches a Mars crew this late.</div>
+          </div>
+        </div>
+        <p className="mt-1.5 text-[11px] text-mute">Real coronal mass ejections set the strength of the Mars radiation storm in your next mission.</p>
+      </section>
+
+      {(best.lunar || best.mars) && (
+        <p className="label relative text-center">
+          Best scores on this device · Lunar {best.lunar ?? '—'} · Mars {best.mars ?? '—'}
+        </p>
+      )}
 
       <p className="label relative text-center">Educational game with simplified engineering rules · Not a flight-certified tool</p>
 
@@ -84,8 +123,20 @@ export function MainMenu() {
                   <Button variant="ghost" onClick={() => dispatch({ type: 'TOGGLE_SOUND' })}>{state.soundOn ? 'On' : 'Off'}</Button>
                 </div>
                 <div className="flex items-center justify-between">
+                  <span className="text-sm text-ink">Music</span>
+                  <Button variant="ghost" onClick={() => dispatch({ type: 'TOGGLE_SETTING', setting: 'musicOn' })}>{state.musicOn ? 'On' : 'Off'}</Button>
+                </div>
+                <div className="flex items-center justify-between">
                   <span className="text-sm text-ink">CRT scanline effect</span>
                   <Button variant="ghost" onClick={() => dispatch({ type: 'TOGGLE_CRT' })}>{state.crtOn ? 'On' : 'Off'}</Button>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-ink">Colour-blind palette<span className="block text-[11px] text-mute">Green becomes blue, red becomes magenta</span></span>
+                  <Button variant="ghost" onClick={() => dispatch({ type: 'TOGGLE_SETTING', setting: 'colorBlind' })}>{state.colorBlind ? 'On' : 'Off'}</Button>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-ink">On-screen touch controls<span className="block text-[11px] text-mute">For tablets and phones</span></span>
+                  <Button variant="ghost" onClick={() => dispatch({ type: 'TOGGLE_SETTING', setting: 'touchControls' })}>{state.touchControls ? 'On' : 'Off'}</Button>
                 </div>
                 <dl className="border-t border-line pt-3 text-xs text-mute">
                   <div className="flex justify-between"><dt>Move</dt><dd>A / D or ← / →</dd></div>
@@ -93,6 +144,7 @@ export function MainMenu() {
                   <div className="flex justify-between"><dt>Sprint</dt><dd>Shift</dd></div>
                   <div className="flex justify-between"><dt>Interact</dt><dd>E</dd></div>
                   <div className="flex justify-between"><dt>Pause</dt><dd>Esc</dd></div>
+                  <div className="mt-1 flex justify-between"><dt>Gamepad</dt><dd>Stick move · A jump · X interact · Start pause</dd></div>
                 </dl>
               </div>
             ) : (
@@ -100,6 +152,7 @@ export function MainMenu() {
                 <p><span className="text-phosphor">BEYOND ORBIT</span> — a 2D space exploration and spacecraft engineering game.</p>
                 <p>Built for the NASA hackathon, November 2026.</p>
                 <p className="text-xs text-mute">Game world: Phaser 3. Interface: React, TypeScript, Tailwind CSS. Icons: Lucide. Fonts: Orbitron, Share Tech Mono. All artwork and sound are generated in code.</p>
+                <p className="text-xs text-mute">Live coronal mass ejection data: NASA DONKI via api.nasa.gov. Each challenge is based on a real event (Soyuz MS-22, Galileo, Apollo 13, Mars Odyssey, Perseverance, InSight).</p>
                 <p className="text-xs text-mute">Mission numbers are simplified for teaching and are not real flight data.</p>
               </div>
             )}

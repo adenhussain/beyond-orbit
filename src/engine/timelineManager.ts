@@ -1,5 +1,6 @@
 import type { Mission } from '../types/mission';
 import type { Build } from '../types/spacecraft';
+import type { SpaceWeather } from '../types/spaceWeather';
 import type { Timeline } from '../types/timeline';
 import { CHALLENGE_COUNT, beginChallenge, getChallenge, getLockReason } from './challengeManager';
 import { applyDecision, cloneState } from './decisionProcessor';
@@ -19,7 +20,12 @@ export function timelineName(index: number): string {
   return index < NAMES.length ? NAMES[index] : `BRANCH-${index + 1}`;
 }
 
-export function createOriginalTimeline(mission: Mission, build: Build, repairKits = 0): Timeline {
+export function createOriginalTimeline(
+  mission: Mission,
+  build: Build,
+  repairKits = 0,
+  spaceWeather?: SpaceWeather,
+): Timeline {
   return {
     id: 'tl-1',
     name: timelineName(0),
@@ -29,7 +35,7 @@ export function createOriginalTimeline(mission: Mission, build: Build, repairKit
     lockedOption: null,
     stage: 'cruise',
     challengeIndex: 0,
-    state: createInitialFlightState(mission, build, repairKits),
+    state: createInitialFlightState(mission, build, repairKits, spaceWeather),
     snapshots: [],
     decisions: [],
     outcome: null,

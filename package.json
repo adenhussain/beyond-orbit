@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "update-space-weather": "node scripts/update-space-weather.mjs"
   },
   "dependencies": {
     "@fontsource/orbitron": "^5.3.0",

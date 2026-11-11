@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { sound } from '../../services/sound';
+import { NO_INPUT } from '../input';
+import type { InputFrame } from '../input';
 
 const WALK_SPEED = 210;
 const SPRINT_SPEED = 340;
@@ -38,7 +40,8 @@ export class Astronaut extends Phaser.Physics.Arcade.Sprite {
     this.useUntil = this.scene.time.now + 280;
   }
 
-  step(controlsEnabled: boolean): void {
+  /** `extra` carries gamepad and touch input for this frame. */
+  step(controlsEnabled: boolean, extra: InputFrame = NO_INPUT): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     const onGround = body.blocked.down || body.touching.down;
     const k = this.keys;
@@ -47,8 +50,9 @@ export class Astronaut extends Phaser.Physics.Arcade.Sprite {
     if (controlsEnabled) {
       if (k.left.isDown || k.a.isDown) direction -= 1;
       if (k.right.isDown || k.d.isDown) direction += 1;
+      if (direction === 0) direction = extra.dir;
     }
-    const sprinting = controlsEnabled && k.shift.isDown;
+    const sprinting = controlsEnabled && (k.shift.isDown || extra.sprint);
     const target = direction * (sprinting ? SPRINT_SPEED : WALK_SPEED);
     // Smooth acceleration, with less control in the air.
     const blend = onGround ? 0.3 : 0.08;
@@ -56,7 +60,7 @@ export class Astronaut extends Phaser.Physics.Arcade.Sprite {
     if (direction !== 0) this.setFlipX(direction < 0);
 
     const jumpPressed = controlsEnabled &&
-      (Phaser.Input.Keyboard.JustDown(k.space) || Phaser.Input.Keyboard.JustDown(k.up) || Phaser.Input.Keyboard.JustDown(k.w));
+      (Phaser.Input.Keyboard.JustDown(k.space) || Phaser.Input.Keyboard.JustDown(k.up) || Phaser.Input.Keyboard.JustDown(k.w) || extra.jumpPressed);
     if (jumpPressed && onGround) {
       body.setVelocityY(this.jumpVelocity);
       sound.click();

@@ -60,7 +60,7 @@ export const MISSIONS: Mission[] = [
     id: 'mars',
     name: 'Mars Sample Collection Mission',
     codename: 'OP. RED HARVEST',
-    destination: 'Mars — Ancient River Delta',
+    destination: 'Mars — Jezero Crater River Delta',
     objective:
       'Land on Mars, drill and cache rock samples, and transmit the science data to Earth.',
     difficulty: 'EXTREME',
@@ -79,7 +79,7 @@ export const MISSIONS: Mission[] = [
       'Downlink capacity for the full science data set',
     ],
     briefing: [
-      'Commander, three and a half billion years ago a river emptied into this crater. If Mars ever hosted life, its traces are locked in that delta mud. Your job is to drill it and tell Earth what you find.',
+      'Commander, more than three billion years ago a river emptied into Jezero crater and built a delta. NASA’s Perseverance rover has been sampling this same region since 2021. If Mars ever hosted life, its traces are locked in that delta mud. Your job is to drill it and tell Earth what you find.',
       'The cruise lasts seven months. During entry, descent and landing your spacecraft will be on its own: by the time Earth hears you have hit the atmosphere, you will already be on the ground, one way or another.',
       'Reliability beats raw performance out here. Every component you select has to work for 240 days with nobody able to touch it.',
     ],
@@ -99,7 +99,7 @@ export const MISSIONS: Mission[] = [
     phases: [
       { name: 'Interplanetary Cruise', location: '0.4 AU from Earth' },
       { name: 'Mars Approach', location: '2.1 million km from Mars' },
-      { name: 'Surface Operations', location: 'River delta, 18° N' },
+      { name: 'Surface Operations', location: 'Jezero crater delta, 18.4° N' },
       { name: 'Data Return', location: 'Mars surface' },
     ],
     segmentBurn: [0.1, 0.25, 0.65, 0],

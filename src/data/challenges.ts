@@ -309,7 +309,33 @@ export const CHALLENGES: Challenge[] = [
     room: 'command',
     description:
       'A coronal mass ejection will reach the spacecraft in 40 minutes, exactly when trajectory correction burn TCM-2 is scheduled. Running electronics through the storm exposes them to damage.',
-    situation: [],
+    // Driven by REAL solar activity: the flags come from NASA's DONKI data at launch.
+    situation: [
+      {
+        id: 'mars_c1_sw_strong',
+        when: [{ flag: 'sw_strong' }],
+        effects: [{ kind: 'debt', debt: 'reliability', amount: 10 }],
+        title: 'Live data: the real Sun is very active',
+        narrative: 'NASA recorded a very fast coronal mass ejection (1,500 km/s or more) in the month before launch. This storm is modelled at full strength, and the electronics have already absorbed extra radiation during cruise.',
+        severity: 'warn',
+      },
+      {
+        id: 'mars_c1_sw_moderate',
+        when: [{ flag: 'sw_moderate' }],
+        effects: [{ kind: 'debt', debt: 'reliability', amount: 5 }],
+        title: 'Live data: the real Sun is moderately active',
+        narrative: 'NASA recorded a fast coronal mass ejection (over 1,000 km/s) in the month before launch. The electronics have absorbed a little extra radiation during cruise.',
+        severity: 'info',
+      },
+      {
+        id: 'mars_c1_sw_quiet',
+        when: [{ flag: 'sw_quiet' }],
+        effects: [],
+        title: 'Live data: the real Sun is quiet',
+        narrative: 'NASA recorded only slow coronal mass ejections in the month before launch, so cruise radiation was low. This storm is a rare, isolated event.',
+        severity: 'good',
+      },
+    ],
     options: [
       {
         id: 'A',

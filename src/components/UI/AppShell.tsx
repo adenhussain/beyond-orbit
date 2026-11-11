@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { GitBranch, Home, Volume2, VolumeX } from 'lucide-react';
 import { useGame } from '../../state/useGame';
 import type { Screen } from '../../types/gameState';
+import { DemoGuide } from './DemoGuide';
 import { Starfield } from './Starfield';
 
 const SCREEN_LABEL: Record<Screen, string> = {
@@ -72,6 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
       </header>
+      <DemoGuide />
       <main className="relative z-10 min-h-0 flex-1 overflow-auto">{children}</main>
       {state.crtOn && <div className="scan-bar" />}
       {state.crtOn && <div className="crt-overlay" />}

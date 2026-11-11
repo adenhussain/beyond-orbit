@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
 import { getResource } from '../../data/resources';
 import { sound } from '../../services/sound';
+import { DEMO_SPAWN_X } from '../../state/demo';
 import { bridge } from '../bridge';
+import { pollInput } from '../input';
+import { worldPalette } from '../palette';
 import { Astronaut } from '../entities/Astronaut';
 import type { LevelMap } from '../maps/levelTypes';
 import { lunarMap } from '../maps/lunarMap';
@@ -67,7 +70,9 @@ export class ExplorationScene extends Phaser.Scene {
     this.placeHazards();
     this.placeWorkshop();
 
-    const spawnX = bridge.state.atWorkshop ? map.workshopX - 140 : map.spawnX;
+    const spawnX = bridge.state.atWorkshop
+      ? map.workshopX - 140
+      : bridge.state.demo && map.missionId === 'lunar' ? DEMO_SPAWN_X : map.spawnX;
     this.safeX = spawnX;
     this.player = new Astronaut(this, spawnX, map.groundY - 4, map.jumpVelocity);
     this.physics.add.collider(this.player, solids.ground);
@@ -363,15 +368,17 @@ export class ExplorationScene extends Phaser.Scene {
   // ----------------------------------------------------------------- loop
 
   update(_time: number, delta: number): void {
+    const pad = pollInput();
     const locked = bridge.inputLocked || bridge.state.paused;
     if (locked) {
       if (!this.physics.world.isPaused) { this.physics.world.pause(); this.tweens.pauseAll(); }
+      if (pad.pausePressed && bridge.state.paused) bridge.dispatch({ type: 'SET_PAUSED', paused: false });
       return;
     }
     if (this.physics.world.isPaused) { this.physics.world.resume(); this.tweens.resumeAll(); }
 
     const { map, player } = this;
-    player.step(true);
+    player.step(true, pad);
     const body = player.body as Phaser.Physics.Arcade.Body;
 
     // Remember the last solid ground so a fall puts the astronaut back nearby.
@@ -415,8 +422,9 @@ export class ExplorationScene extends Phaser.Scene {
       if (d < it.range && d < best) { best = d; nearest = it; }
     }
     if (nearest) {
+      this.prompt.setColor(worldPalette().goodCss);
       this.prompt.setText(nearest.label()).setPosition(nearest.x, nearest.y - 12).setVisible(true);
-      if (Phaser.Input.Keyboard.JustDown(this.keyE)) {
+      if (Phaser.Input.Keyboard.JustDown(this.keyE) || pad.interactPressed) {
         player.interact();
         nearest.use();
       }
@@ -424,7 +432,7 @@ export class ExplorationScene extends Phaser.Scene {
       this.prompt.setVisible(false);
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keyEsc)) bridge.dispatch({ type: 'SET_PAUSED', paused: true });
+    if (Phaser.Input.Keyboard.JustDown(this.keyEsc) || pad.pausePressed) bridge.dispatch({ type: 'SET_PAUSED', paused: true });
 
     this.hudTimer += delta;
     if (this.hudTimer > 200) {

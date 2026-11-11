@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from 'react';
-import { History, Search, Users, Wrench } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { History, Search, Trophy, Users, Wrench } from 'lucide-react';
 import { EventLog } from '../components/MissionControl/EventLog';
 import { InventoryHud } from '../components/Inventory/InventoryHud';
 import { DebtPanel } from '../components/ResourceDashboard/DebtPanel';
@@ -10,15 +10,27 @@ import type { Tone } from '../components/UI/Panel';
 import { challengesForMission } from '../data/challenges';
 import { CATEGORIES, SLOTS, getComponent } from '../data/spacecraftComponents';
 import { analyzeFailure } from '../engine/failureAnalyzer';
+import { scoreMission } from '../engine/missionScore';
+import { recordScore } from '../state/saveGame';
 import { sound } from '../services/sound';
 import { useGame } from '../state/useGame';
 
 const RESULT_TONE: Record<string, Tone> = { success: 'good', partial: 'warn', failure: 'crit' };
 
 export function MissionOutcome() {
-  const { state: game, dispatch, mission, timeline } = useGame();
+  const { state: game, dispatch, mission, timeline, stats } = useGame();
   const outcome = timeline?.outcome ?? null;
   const autopsy = useMemo(() => (timeline && mission ? analyzeFailure(timeline, mission) : null), [timeline, mission]);
+  const score = useMemo(
+    () => (timeline && stats ? scoreMission(timeline, stats.cost, stats.budget) : null),
+    [timeline, stats],
+  );
+  // Best score on this device (the demo does not count).
+  const [previousBest, setPreviousBest] = useState<number | null>(null);
+  useEffect(() => {
+    if (!score || !mission || game.demo) return;
+    setPreviousBest(recordScore(mission.id, score.total));
+  }, [score, mission, game.demo]);
 
   useEffect(() => {
     if (!outcome) return;
@@ -54,6 +66,28 @@ export function MissionOutcome() {
           </Button>
         </div>
       </section>
+
+      {score && (
+        <Panel title="Mission Score" tone={tone} right={previousBest !== null && score.total > previousBest ? <span className="blink text-phosphor">NEW BEST</span> : previousBest ? `BEST ${Math.max(previousBest, score.total)}` : ''}>
+          <div className="grid items-center gap-4 md:grid-cols-[220px_1fr]">
+            <div className="text-center">
+              <Trophy size={22} className={`mx-auto ${TONE_TEXT[tone]}`} />
+              <div className={`display mt-1 text-4xl font-black tabular-nums ${TONE_TEXT[tone]}`}>{score.total}</div>
+              <div className="label">of {score.max} · rank</div>
+              <div className="display text-sm font-bold text-ink">{score.rank}</div>
+            </div>
+            <ul className="grid gap-x-6 gap-y-1.5 text-xs sm:grid-cols-2">
+              {score.lines.map((line) => (
+                <li key={line.label}>
+                  <div className="flex justify-between"><span className="text-ink">{line.label}</span><span className="tabular-nums text-phosphor">{line.points}/{line.max}</span></div>
+                  <div className="h-1 bg-void"><div className="h-full bg-phosphor" style={{ width: `${(line.points / line.max) * 100}%` }} /></div>
+                  <div className="text-mute">{line.detail}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Panel>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Mission Objective" tone="info">

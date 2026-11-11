@@ -1,4 +1,5 @@
 import type { Inventory, RoomId } from './resources';
+import type { SpaceWeather } from './spaceWeather';
 import type { Build, CategoryId, DebtType, Debts } from './spacecraft';
 import type { Verdict } from './challenge';
 import type { Timeline } from './timeline';
@@ -83,6 +84,8 @@ export interface FlightState {
   flagOrigins: Record<string, FlagOrigin>;
   log: LogEntry[];
   specs: FlightSpecs;
+  /** Real solar activity captured at launch (live NASA data), if available. */
+  spaceWeather?: SpaceWeather;
 }
 
 export interface DecisionRecord {
@@ -168,4 +171,11 @@ export interface GameState {
   /** In flight: which room's system console is open, if any. */
   systemPanel: RoomId | null;
   paused: boolean;
+  /** Latest real space weather from NASA, used at the next launch. */
+  spaceWeather: SpaceWeather | null;
+  musicOn: boolean;
+  colorBlind: boolean;
+  touchControls: boolean;
+  /** Guided 3-minute demo for presentations. */
+  demo: boolean;
 }

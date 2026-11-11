@@ -2,6 +2,7 @@ import { getMission } from '../data/missions';
 import { emptyInventory } from '../data/resources';
 import { emptyBuild } from '../data/spacecraftComponents';
 import { toggleComponent } from '../engine/buildEditor';
+import { startDemo } from './demo';
 import {
   arriveAtNextPoint,
   branchTimeline,
@@ -13,6 +14,7 @@ import {
 import type { GameState, Screen } from '../types/gameState';
 import type { ResourceId, RoomId } from '../types/resources';
 import type { Build } from '../types/spacecraft';
+import type { SpaceWeather } from '../types/spaceWeather';
 import type { Timeline } from '../types/timeline';
 
 /**
@@ -42,6 +44,10 @@ export type GameAction =
   | { type: 'TOGGLE_SOUND' }
   | { type: 'TOGGLE_CRT' }
   | { type: 'LOAD_GAME'; saved: GameState }
+  | { type: 'SET_SPACE_WEATHER'; spaceWeather: SpaceWeather }
+  | { type: 'TOGGLE_SETTING'; setting: 'musicOn' | 'colorBlind' | 'touchControls' }
+  | { type: 'START_DEMO' }
+  | { type: 'EXIT_DEMO' }
   | { type: 'RESET' };
 
 export const initialGameState: GameState = {
@@ -59,6 +65,11 @@ export const initialGameState: GameState = {
   challengeOpen: false,
   systemPanel: null,
   paused: false,
+  spaceWeather: null,
+  musicOn: true,
+  colorBlind: false,
+  touchControls: false,
+  demo: false,
 };
 
 /** Runs an engine step on the active timeline and stores the result. */
@@ -67,6 +78,12 @@ function updateActive(state: GameState, step: (t: Timeline) => Timeline): GameSt
   const active = timelines.find((t) => t.id === state.activeTimelineId);
   const finished = active?.stage === 'complete';
   return { ...state, timelines, screen: finished ? 'outcome' : state.screen };
+}
+
+/** Settings and live data that survive starting a new game. */
+function preferences(state: GameState) {
+  const { soundOn, crtOn, musicOn, colorBlind, touchControls, spaceWeather } = state;
+  return { soundOn, crtOn, musicOn, colorBlind, touchControls, spaceWeather };
 }
 
 const closed = { timeMachineOpen: false, challengeOpen: false, systemPanel: null, paused: false } as const;
@@ -111,7 +128,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'LAUNCH': {
       if (!state.missionId) return state;
       // Repair kits are not used in construction, so all of them come aboard.
-      const timeline = createOriginalTimeline(getMission(state.missionId), state.build, state.inventory.repair);
+      const timeline = createOriginalTimeline(
+        getMission(state.missionId), state.build, state.inventory.repair, state.spaceWeather ?? undefined,
+      );
       return { ...state, ...closed, timelines: [timeline], activeTimelineId: timeline.id, screen: 'launch' };
     }
 
@@ -175,11 +194,21 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...initialGameState,
         ...action.saved,
+        ...preferences(state),
+        spaceWeather: action.saved.spaceWeather ?? state.spaceWeather,
         ...closed,
         // The launch cinematic cannot be resumed half-way; go straight aboard.
         screen: action.saved.screen === 'launch' ? 'flight' : action.saved.screen,
       };
+    case 'SET_SPACE_WEATHER':
+      return { ...state, spaceWeather: action.spaceWeather };
+    case 'TOGGLE_SETTING':
+      return { ...state, [action.setting]: !state[action.setting] };
+    case 'START_DEMO':
+      return startDemo({ ...initialGameState, ...preferences(state) });
+    case 'EXIT_DEMO':
+      return { ...initialGameState, ...preferences(state) };
     case 'RESET':
-      return { ...initialGameState, soundOn: state.soundOn, crtOn: state.crtOn };
+      return { ...initialGameState, ...preferences(state) };
   }
 }

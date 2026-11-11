@@ -3,6 +3,7 @@ import { Shield, Wind } from 'lucide-react';
 import { PhaserGame } from '../components/Game/PhaserGame';
 import { HudBar } from '../components/HUD/HudBar';
 import { PauseMenu } from '../components/HUD/PauseMenu';
+import { TouchControls } from '../components/HUD/TouchControls';
 import { InventoryHud } from '../components/Inventory/InventoryHud';
 import type { SuitHud } from '../game/bridge';
 import { useGame } from '../state/useGame';
@@ -56,6 +57,7 @@ export function Exploration() {
         A/D MOVE · SPACE JUMP · SHIFT SPRINT · E INTERACT · ESC PAUSE
       </div>
 
+      <TouchControls />
       <PauseMenu />
     </div>
   );

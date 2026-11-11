@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { BatteryCharging, FastForward, Fuel, Shield, Thermometer, Wind, Wrench } from 'lucide-react';
+import { BatteryCharging, FastForward, Fuel, Radio, Shield, Thermometer, Wind, Wrench } from 'lucide-react';
 import { ChallengeDialog } from '../components/ChallengeSystem/ChallengeDialog';
 import { PhaserGame } from '../components/Game/PhaserGame';
 import { HudBar } from '../components/HUD/HudBar';
 import { PauseMenu } from '../components/HUD/PauseMenu';
+import { TouchControls } from '../components/HUD/TouchControls';
 import { SystemPanel } from '../components/MissionControl/SystemPanel';
 import { getChallenge } from '../engine/challengeManager';
 import { getStat } from '../engine/decisionProcessor';
+import { lightDelay } from '../engine/lightTime';
 import { cabinTemperature } from '../engine/missionSimulator';
 import type { SuitHud } from '../game/bridge';
 import { getRoom } from '../game/maps/spacecraftMap';
@@ -24,7 +26,8 @@ export function FlightOperations() {
   const { state: game, dispatch, mission, timeline } = useGame();
   const [hud, setHud] = useState<SuitHud>({ suit: 100, oxygen: 100, zone: '' });
   const [progress, setProgress] = useState(timeline?.state.progress ?? 0);
-  const [fast, setFast] = useState(false);
+  // Time warp starts on in the demo, so presentations stay short.
+  const [fast, setFast] = useState(game.demo);
   const fastRef = useRef(fast);
   fastRef.current = fast;
 
@@ -121,6 +124,7 @@ export function FlightOperations() {
         <div className="label">Location</div>
         <div className="text-sm text-phosphor">{hud.zone || '—'}</div>
         <div className="mt-1 flex items-center justify-end gap-1.5 text-xs text-ink/80"><Wrench size={12} /> {s.repairKits} repair kit{s.repairKits === 1 ? '' : 's'}</div>
+        <div className="flex items-center justify-end gap-1.5 text-xs text-cyan"><Radio size={12} /> Earth link {lightDelay(mission.id).label}</div>
       </div>
 
       {awaiting && challenge && (
@@ -144,6 +148,7 @@ export function FlightOperations() {
 
       {game.challengeOpen && <ChallengeDialog />}
       <SystemPanel />
+      <TouchControls />
       <PauseMenu />
     </div>
   );

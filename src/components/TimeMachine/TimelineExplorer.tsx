@@ -2,6 +2,7 @@ import { GitBranch, History, RotateCcw, X } from 'lucide-react';
 import { challengesForMission } from '../../data/challenges';
 import { DEBT_LABEL } from '../../engine/resourceCalculator';
 import { DEBT_TYPES } from '../../engine/technicalDebt';
+import { scoreMission } from '../../engine/missionScore';
 import { rewindPoints } from '../../engine/timelineManager';
 import { sound } from '../../services/sound';
 import { useGame } from '../../state/useGame';
@@ -25,7 +26,7 @@ function statusOf(t: Timeline): { text: string; tone: Tone } {
  * to any past decision (creating a new timeline), and compares the results.
  */
 export function TimelineExplorer() {
-  const { state, dispatch, mission } = useGame();
+  const { state, dispatch, mission, stats } = useGame();
   if (!mission) return null;
   const challenges = challengesForMission(mission.id);
   const timelines = state.timelines;
@@ -42,6 +43,7 @@ export function TimelineExplorer() {
     { label: 'Mission status', value: (t) => statusOf(t).text, tone: (t) => statusOf(t).tone },
     { label: 'Science objective', value: (t) => (t.outcome ? `${Math.floor(t.outcome.sciencePct)}%` : 'pending') },
     { label: 'Data returned', value: (t) => (t.outcome ? `${t.outcome.dataReturnedGB.toFixed(1)} GB` : 'pending') },
+    { label: 'Mission score', value: (t) => (stats ? `${scoreMission(t, stats.cost, stats.budget)?.total ?? 'pending'}` : '—') },
     { label: 'Oxygen', value: (t) => `${Math.round(t.state.oxygen)}%` },
     { label: 'Fuel remaining', value: (t) => `${Math.round(t.state.fuel)} kg` },
     { label: 'Battery', value: (t) => `${Math.round((t.state.batteryWh / Math.max(1, t.state.specs.batteryCapacity)) * 100)}%` },

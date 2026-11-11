@@ -4,6 +4,8 @@ import { sound } from '../../services/sound';
 import type { RoomId } from '../../types/resources';
 import type { Timeline } from '../../types/timeline';
 import { bridge } from '../bridge';
+import { pollInput } from '../input';
+import { worldPalette } from '../palette';
 import { Astronaut } from '../entities/Astronaut';
 import { ROOMS, SHIP, SHIP_WIDTH, getRoom, roomAt } from '../maps/spacecraftMap';
 
@@ -275,7 +277,9 @@ export class InteriorScene extends Phaser.Scene {
     this.alarmRoom = roomId;
     if (roomId) {
       const overlay = this.alarms.get(roomId)!;
-      overlay.setFillStyle(0xff2a2a, 0.22);
+      overlay.setFillStyle(worldPalette().alert, 0.22);
+      this.beacons.get(roomId)!.setFillStyle(worldPalette().alert, 1);
+      this.guide.setColor(worldPalette().alertCss);
       this.tweens.add({ targets: overlay, alpha: 0.25, duration: 500, yoyo: true, repeat: -1 });
       this.beacons.get(roomId)!.setVisible(true);
       this.cameras.main.shake(350, 0.006);
@@ -284,14 +288,16 @@ export class InteriorScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     const timeline = this.timeline;
+    const pad = pollInput();
     const locked = bridge.inputLocked || bridge.state.paused;
+    if (pad.pausePressed) bridge.dispatch({ type: 'SET_PAUSED', paused: !bridge.state.paused });
     if (locked) {
       if (!this.physics.world.isPaused) this.physics.world.pause();
     } else if (this.physics.world.isPaused) {
       this.physics.world.resume();
     }
     const player = this.player;
-    player.step(!locked);
+    player.step(!locked, pad);
 
     // Doors slide open as the astronaut approaches.
     for (const door of this.doors) {
@@ -351,9 +357,9 @@ export class InteriorScene extends Phaser.Scene {
       const isTarget = awaiting && challenge?.room === here.id;
       this.prompt
         .setText(isTarget ? `[E] RESPOND: ${challenge!.title.toUpperCase()}` : `[E] ${here.console.toUpperCase()}`)
-        .setColor(isTarget ? '#ff4f4f' : '#5dfc9a')
+        .setColor(isTarget ? worldPalette().alertCss : worldPalette().goodCss)
         .setPosition(consoleX, SHIP.floorY - 96).setVisible(true);
-      if (Phaser.Input.Keyboard.JustDown(this.keyE)) {
+      if (Phaser.Input.Keyboard.JustDown(this.keyE) || pad.interactPressed) {
         player.interact();
         sound.confirm();
         bridge.dispatch(isTarget ? { type: 'OPEN_CHALLENGE' } : { type: 'OPEN_PANEL', room: here.id });

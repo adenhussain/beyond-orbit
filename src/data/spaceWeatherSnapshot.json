@@ -1,0 +1,10 @@
+{
+  "source": "snapshot",
+  "level": "moderate",
+  "eventCount": 85,
+  "fastestSpeed": 1048,
+  "fastestType": "O",
+  "fastestDate": "2026-10-17",
+  "windowDays": 30,
+  "fetchedAt": "2026-11-11T09:43:03.861Z"
+}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, Wrench } from 'lucide-react';
 import { Button } from '../components/UI/Button';
 import { Panel } from '../components/UI/Panel';
+import { lightDelay } from '../engine/lightTime';
 import { useGame } from '../state/useGame';
 
 /** Reveals text one character at a time, like a teletype. */
@@ -21,7 +22,7 @@ function useTypewriter(text: string, speed = 12): string {
 }
 
 export function MissionBriefing() {
-  const { mission, dispatch } = useGame();
+  const { state, mission, dispatch } = useGame();
   const fullText = mission ? mission.briefing.join('\n\n') : '';
   const typed = useTypewriter(fullText);
   if (!mission) return null;
@@ -46,6 +47,13 @@ export function MissionBriefing() {
       <div className="grid gap-5 md:grid-cols-2">
         <Panel title="Primary Objective" tone="info">
           <p className="text-sm text-ink/90">{mission.objective}</p>
+          <p className="mt-3 text-xs text-cyan">
+            Radio delay to {mission.id === 'mars' ? 'Mars' : 'the Moon'} today: {lightDelay(mission.id).label} each way.
+            {mission.id === 'mars' && ' In emergencies you will wait for Earth or decide alone.'}
+          </p>
+          {mission.id === 'mars' && state.spaceWeather && state.spaceWeather.source !== 'offline' && (
+            <p className="mt-1 text-xs text-amber">Live NASA space weather: {state.spaceWeather.level} solar activity. It will shape the radiation storm on this mission.</p>
+          )}
           <p className="mt-3 text-xs text-mute">
             Success requires returning {mission.scienceTarget} science points to Earth. Half of that earns a partial success.
           </p>
